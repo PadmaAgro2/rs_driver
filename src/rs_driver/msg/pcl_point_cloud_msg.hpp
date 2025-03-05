@@ -32,6 +32,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+<<<<<<< HEAD
+=======
+//#include <pcl/io/io.h>
+>>>>>>> 5a9add9 (working compile on workstation)
 #include <pcl/common/io.h>
 #include <pcl/point_types.h>
 

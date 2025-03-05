@@ -198,7 +198,11 @@ int main(int argc, char* argv[])
 #if ENABLE_IMU_PARSE
   param.input_param.imu_port = 6688;   ///< Set the lidar imu port number, the default is 0
 #endif
+<<<<<<< HEAD
   param.lidar_type = LidarType::RSAIRYLITE_ETH;   ///< Set the lidar type. Make sure this type is correct
+=======
+  param.lidar_type = LidarType::RSE1;   ///< Set the lidar type. Make sure this type is correct
+>>>>>>> 5a9add9 (working compile on workstation)
   param.print();
    
   LidarDriver<PointCloudMsg> driver;               ///< Declare the driver object
