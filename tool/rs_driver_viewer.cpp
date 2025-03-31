@@ -262,14 +262,21 @@ int main(int argc, char* argv[])
 
   // ATTEMPT TO FIX SEG FAULT
   // RSDriverParam param;                  ///< Create a parameter object
-  param.input_type = InputType::ONLINE_LIDAR;
+  param.input_type = InputType::PCAP_FILE;
   param.input_param.msop_port = 6699;   ///< Set the lidar msop port number, the default is 6699
   param.input_param.difop_port = 7788;  ///< Set the lidar difop port number, the default is 7788
   param.input_param.imu_port = 6688;   ///< Set the lidar imu port number, the default is 0
   param.lidar_type = LidarType::RSE1;   ///< Set the lidar type. Make sure this type is correct
   //param.print();
+  //param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/padma-lidar-data/recorded_data/run1.pcap"; 
+  //param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/padma-lidar-data/recorded_data/run2.pcap"; 
+  //param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/padma-lidar-data/WoodPlanks_031725/woodplanks_inside_forwards1.pcap";
+  //param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/padma-lidar-data/WoodPlanks_031725/woodplanks_outside_forward1.pcap";
 
-
+  //param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/HighKalePlants/highplants_row1.pcap";
+  //param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/DiscedBeds/empty_fwd1.pcap";
+  //param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/EmptyBeds/empty_fwd4.pcap";
+  param.input_param.pcap_path = "/home/csaba-padma/projects/padma-lidar-data/Empty_AloeBeds/empty_fwd2.pcap";
   param.print();
 
   pcl_viewer = std::make_shared<PCLVisualizer>("RSPointCloudViewer");
