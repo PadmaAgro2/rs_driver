@@ -51,20 +51,37 @@ int main(int argc, char* argv[]) {
     }
 
     driver.start();
-
-    for (int k =0; k < 10; k++)
+    for (int k = 0; k < 10; k++)
     {
         std::shared_ptr<PointCloudMsg> msg = cloud_queue.popWait();
-
+    
         pcl::PointCloud<pcl::PointXYZI> cloud;
         cloud.points = msg->points;
         cloud.width = msg->width;
         cloud.height = msg->height;
         cloud.is_dense = msg->is_dense;
-
+    
+        std::cout << "Frame " << k << ": " << cloud.points.size() << " points." << std::endl;
+    
+        // Print first few valid points
+        int count = 0;
+        for (const auto& pt : cloud.points) {
+            if (std::isfinite(pt.x) && std::isfinite(pt.y) && std::isfinite(pt.z)) {
+                std::cout << "  Point " << count << ": x=" << pt.x << ", y=" << pt.y << ", z=" << pt.z 
+                          << ", intensity=" << pt.intensity << std::endl;
+                count++;
+            }
+            else
+            {
+                std::cout << "ERROR INVALID POINT";
+            }
+            if (count >= 5) break;
+        }
+    
         pcl::io::savePLYFileBinary(output_file, cloud);
         RS_INFO << "Saved to " << output_file << RS_REND;
     }
+    
 
     driver.stop();
     return 0;
