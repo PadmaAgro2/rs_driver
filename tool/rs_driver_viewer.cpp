@@ -4,10 +4,14 @@
 #include <pcl/io/ply_io.h>
 #include <pcl/point_types.h>
 
+#include <filesystem>
 #include <iostream>
 #include <string>
+#include <chrono>  // for timeout
+
 
 using namespace robosense::lidar;
+namespace fs = std::filesystem;
 
 typedef PointCloudT<pcl::PointXYZI> PointCloudMsg;
 
@@ -25,18 +29,30 @@ void putCallback(std::shared_ptr<PointCloudMsg> msg) {
     cloud_queue.push(msg);
 }
 
+std::string getBaseName(const std::string& filepath) {
+    return fs::path(filepath).stem().string();  // removes extension
+}
+
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <input.pcap> [output.ply]" << std::endl;
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <input.pcap> <output_folder>" << std::endl;
         return 1;
     }
 
     std::string pcap_path = argv[1];
-    std::string output_file = (argc >= 3) ? argv[2] : "output_frame.ply";
+    std::string output_dir = argv[2];
+
+    if (!fs::exists(output_dir)) {
+        std::cerr << "❌ Output directory does not exist: " << output_dir << std::endl;
+        return 1;
+    }
+
+    std::string base_name = getBaseName(pcap_path);
 
     RSDriverParam param;
     param.input_type = InputType::PCAP_FILE;
     param.input_param.pcap_path = pcap_path;
+    param.input_param.pcap_repeat = false;
     param.input_param.msop_port = 6699;
     param.input_param.difop_port = 7788;
     param.lidar_type = LidarType::RSE1;
@@ -51,37 +67,39 @@ int main(int argc, char* argv[]) {
     }
 
     driver.start();
-    for (int k = 0; k < 10; k++)
-    {
+
+    int frame_count = 0;
+    const int max_frames = 50000; // You can raise this if needed
+
+    while (frame_count < max_frames) {
         std::shared_ptr<PointCloudMsg> msg = cloud_queue.popWait();
-    
+
         pcl::PointCloud<pcl::PointXYZI> cloud;
-        cloud.points = msg->points;
-        cloud.width = msg->width;
-        cloud.height = msg->height;
-        cloud.is_dense = msg->is_dense;
-    
-        std::cout << "Frame " << k << ": " << cloud.points.size() << " points." << std::endl;
-    
-        // Print first few valid points
-        int count = 0;
-        for (const auto& pt : cloud.points) {
+
+        // Filter out invalid (NaN) points
+        for (const auto& pt : msg->points) {
             if (std::isfinite(pt.x) && std::isfinite(pt.y) && std::isfinite(pt.z)) {
-                std::cout << "  Point " << count << ": x=" << pt.x << ", y=" << pt.y << ", z=" << pt.z 
-                          << ", intensity=" << pt.intensity << std::endl;
-                count++;
+                cloud.points.push_back(pt);
             }
-            else
-            {
-                std::cout << "ERROR INVALID POINT";
-            }
-            if (count >= 5) break;
         }
-    
-        pcl::io::savePLYFileBinary(output_file, cloud);
-        RS_INFO << "Saved to " << output_file << RS_REND;
+
+        if (cloud.points.empty()) {
+            std::cout << "⚠️  Frame " << frame_count << " has no valid points. Skipping." << std::endl;
+            continue;
+        }
+
+        cloud.width = cloud.points.size();
+        cloud.height = 1;
+        cloud.is_dense = false;
+
+        std::string filename = base_name + "_" + std::to_string(frame_count) + ".ply";
+        fs::path output_path = fs::path(output_dir) / filename;
+
+        pcl::io::savePLYFileBinary(output_path.string(), cloud);
+        std::cout << "✅ Saved: " << output_path.string() << " (" << cloud.points.size() << " points)" << std::endl;
+
+        frame_count++;
     }
-    
 
     driver.stop();
     return 0;
