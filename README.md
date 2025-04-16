@@ -4,10 +4,10 @@
 
 ## 1.0 Padma specific
 
-
+```
 cd .. && rm -rf build && mkdir build && cd build && cmake -DCOMPILE_TOOLS=ON -DCOMPILE_DEMOS=ON .. && make -j4 && sudo make install
-
-
+```
+```
 ./demo/demo_pcap
 
 ./demo/demo_online
@@ -15,7 +15,7 @@ cd .. && rm -rf build && mkdir build && cd build && cmake -DCOMPILE_TOOLS=ON -DC
 ./tool/rs_driver_viewer -type RSE1
 
 ./tool/rs_driver_viewer -type RSE1 -pcap /home/csaba-padma/projects/rs_driver/build/a2.pcap
-
+```
 
 
 ## 1.1 Introduction
