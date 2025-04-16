@@ -15,6 +15,14 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+#========================
+#  Add ZMQ
+#========================
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ZMQ REQUIRED libzmq)
+include_directories(${ZMQ_INCLUDE_DIRS})
+list(APPEND EXTERNAL_LIBS ${ZMQ_LIBRARIES})  # <-- make sure we link it later
+
 #=============================
 #  Compile Features
 #=============================
@@ -148,8 +156,6 @@ if(${ENABLE_TRANSFORM})
 
 endif(${ENABLE_TRANSFORM})
 
-
-
 #============================
 #  Build Demos, Tools, Tests
 #============================
@@ -243,4 +249,3 @@ if(UNIX AND ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   endif(NOT TARGET uninstall)
 
 endif(UNIX AND ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-
