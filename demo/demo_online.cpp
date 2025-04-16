@@ -31,6 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************************************************************/
 
 #include <rs_driver/api/lidar_driver.hpp>
+#include <zmq.hpp>
 
 #ifdef ENABLE_PCL_POINTCLOUD
 #include <rs_driver/msg/pcl_point_cloud_msg.hpp>
@@ -53,6 +54,8 @@ SyncQueue<std::shared_ptr<PointCloudMsg>> stuffed_cloud_queue;
 
 SyncQueue<std::shared_ptr<ImuData>> free_imu_data_queue;
 SyncQueue<std::shared_ptr<ImuData>> stuffed_imu_data_queue;
+
+zmq::socket_t* g_zmq_pub = nullptr;
 
 //
 // @brief point cloud callback function. The caller should register it to the lidar driver.
@@ -155,11 +158,12 @@ void exceptionCallback(const Error& code)
 }
 
 
-void processCloud(void)
+void processCloud()
 {
   while (!to_exit_process)
   {
     std::shared_ptr<PointCloudMsg> msg = stuffed_cloud_queue.popWait();
+
     if (msg.get() == NULL)
     {
       continue;
@@ -168,18 +172,22 @@ void processCloud(void)
     // Well, it is time to process the point cloud msg, even it is time-consuming.
     RS_MSG << "msg: " << msg->seq << " point cloud size: " << msg->points.size() << RS_REND;
 
-#if 0
-    for (auto it = msg->points.begin(); it != msg->points.end(); it++)
+    // Pack a small buffer for x, y, z, intensity as float32
+    std::vector<float> buffer;
+    buffer.reserve(msg->points.size() * 4);
+    for (const auto& pt : msg->points)
     {
-      std::cout << std::fixed << std::setprecision(3) 
-                << "(" << it->x << ", " << it->y << ", " << it->z << ", " << (int)it->intensity << ")" 
-                << std::endl;
+      buffer.push_back(pt.x);
+      buffer.push_back(pt.y);
+      buffer.push_back(pt.z);
+      buffer.push_back(pt.intensity);
     }
-#endif
+
+    zmq::message_t zmq_msg(buffer.size() * sizeof(float));
+    memcpy(zmq_msg.data(), buffer.data(), zmq_msg.size());
+    g_zmq_pub->send(zmq_msg, zmq::send_flags::none);
 
     free_cloud_queue.push(msg);
-
-
   }
 }
 
@@ -188,6 +196,12 @@ int main(int argc, char* argv[])
   RS_TITLE << "------------------------------------------------------" << RS_REND;
   RS_TITLE << "            RS_Driver Core Version: v" << getDriverVersion() << RS_REND;
   RS_TITLE << "------------------------------------------------------" << RS_REND;
+
+  zmq::context_t zmq_ctx(1);
+  zmq::socket_t zmq_pub(zmq_ctx, zmq::socket_type::pub);
+  zmq_pub.bind("tcp://*:5556");  // Use TCP instead
+
+  g_zmq_pub = &zmq_pub;
 
   RSDriverParam param;                  ///< Create a parameter object
   param.input_type = InputType::ONLINE_LIDAR;

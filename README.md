@@ -5,6 +5,13 @@
 ## 1.0 Padma specific
 
 ```
+sudo apt-get update
+sudo apt-get install libzmq3-dev
+sudo apt-get install libczmq-dev  # optional
+```
+
+
+```
 cd .. && rm -rf build && mkdir build && cd build && cmake -DCOMPILE_TOOLS=ON -DCOMPILE_DEMOS=ON .. && make -j4 && sudo make install
 ```
 ```
