@@ -200,12 +200,19 @@ int main(int argc, char* argv[])
   uint16_t msop_port = 6699;
   uint16_t difop_port = 7788;
 
+  uint16_t zmq_port = 5556;
+
   if (argc >= 2) msop_port = static_cast<uint16_t>(std::stoi(argv[1]));
   if (argc >= 3) difop_port = static_cast<uint16_t>(std::stoi(argv[2]));
+  if (argc >= 4) zmq_port = static_cast<uint16_t>(std::stoi(argv[3]));
 
   zmq::context_t zmq_ctx(1);
   zmq::socket_t zmq_pub(zmq_ctx, zmq::socket_type::pub);
-  zmq_pub.bind("tcp://*:5556");  // Use TCP instead
+  
+  //zmq_pub.bind("tcp://*:5556");  // Use TCP instead
+
+  std::string zmq_bind_addr = "tcp://*:" + std::to_string(zmq_port);
+  zmq_pub.bind(zmq_bind_addr);  // Use TCP instead
 
   g_zmq_pub = &zmq_pub;
 
