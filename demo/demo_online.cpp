@@ -197,6 +197,12 @@ int main(int argc, char* argv[])
   RS_TITLE << "            RS_Driver Core Version: v" << getDriverVersion() << RS_REND;
   RS_TITLE << "------------------------------------------------------" << RS_REND;
 
+  uint16_t msop_port = 6699;
+  uint16_t difop_port = 7788;
+
+  if (argc >= 2) msop_port = static_cast<uint16_t>(std::stoi(argv[1]));
+  if (argc >= 3) difop_port = static_cast<uint16_t>(std::stoi(argv[2]));
+
   zmq::context_t zmq_ctx(1);
   zmq::socket_t zmq_pub(zmq_ctx, zmq::socket_type::pub);
   zmq_pub.bind("tcp://*:5556");  // Use TCP instead
@@ -205,8 +211,8 @@ int main(int argc, char* argv[])
 
   RSDriverParam param;                  ///< Create a parameter object
   param.input_type = InputType::ONLINE_LIDAR;
-  param.input_param.msop_port = 6699;   ///< Set the lidar msop port number, the default is 6699
-  param.input_param.difop_port = 7788;  ///< Set the lidar difop port number, the default is 7788
+  param.input_param.msop_port = msop_port;   ///< Set the lidar msop port number, the default is 6699
+  param.input_param.difop_port = difop_port;  ///< Set the lidar difop port number, the default is 7788
 #if ENABLE_IMU_PARSE
   param.input_param.imu_port = 6688;   ///< Set the lidar imu port number, the default is 0
 #endif
