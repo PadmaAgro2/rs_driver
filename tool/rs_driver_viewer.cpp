@@ -47,14 +47,20 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    uint16_t msop_port = 6699;
+    uint16_t difop_port = 7788;
+
+    if (argc >= 4) msop_port = static_cast<uint16_t>(std::stoi(argv[3]));
+    if (argc >= 5) difop_port = static_cast<uint16_t>(std::stoi(argv[4]));
+
     std::string base_name = getBaseName(pcap_path);
 
     RSDriverParam param;
     param.input_type = InputType::PCAP_FILE;
     param.input_param.pcap_path = pcap_path;
     param.input_param.pcap_repeat = false;
-    param.input_param.msop_port = 6699;
-    param.input_param.difop_port = 7788;
+    param.input_param.msop_port = msop_port;
+    param.input_param.difop_port = difop_port;
     param.lidar_type = LidarType::RSE1;
 
     LidarDriver<PointCloudMsg> driver;
