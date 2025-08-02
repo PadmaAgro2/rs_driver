@@ -31,6 +31,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************************************************************/
 
 #include <rs_driver/api/lidar_driver.hpp>
+#include <zmq.hpp>
 
 #ifdef ENABLE_PCL_POINTCLOUD
 #include <rs_driver/msg/pcl_point_cloud_msg.hpp>
@@ -53,6 +54,8 @@ SyncQueue<std::shared_ptr<PointCloudMsg>> stuffed_cloud_queue;
 
 SyncQueue<std::shared_ptr<ImuData>> free_imu_data_queue;
 SyncQueue<std::shared_ptr<ImuData>> stuffed_imu_data_queue;
+
+zmq::socket_t* g_zmq_pub = nullptr;
 
 //
 // @brief point cloud callback function. The caller should register it to the lidar driver.
@@ -155,11 +158,12 @@ void exceptionCallback(const Error& code)
 }
 
 
-void processCloud(void)
+void processCloud()
 {
   while (!to_exit_process)
   {
     std::shared_ptr<PointCloudMsg> msg = stuffed_cloud_queue.popWait();
+
     if (msg.get() == NULL)
     {
       continue;
@@ -168,18 +172,22 @@ void processCloud(void)
     // Well, it is time to process the point cloud msg, even it is time-consuming.
     RS_MSG << "msg: " << msg->seq << " point cloud size: " << msg->points.size() << RS_REND;
 
-#if 0
-    for (auto it = msg->points.begin(); it != msg->points.end(); it++)
+    // Pack a small buffer for x, y, z, intensity as float32
+    std::vector<float> buffer;
+    buffer.reserve(msg->points.size() * 4);
+    for (const auto& pt : msg->points)
     {
-      std::cout << std::fixed << std::setprecision(3) 
-                << "(" << it->x << ", " << it->y << ", " << it->z << ", " << (int)it->intensity << ")" 
-                << std::endl;
+      buffer.push_back(pt.x);
+      buffer.push_back(pt.y);
+      buffer.push_back(pt.z);
+      buffer.push_back(pt.intensity);
     }
-#endif
+
+    zmq::message_t zmq_msg(buffer.size() * sizeof(float));
+    memcpy(zmq_msg.data(), buffer.data(), zmq_msg.size());
+    g_zmq_pub->send(zmq_msg, zmq::send_flags::none);
 
     free_cloud_queue.push(msg);
-
-
   }
 }
 
@@ -189,14 +197,33 @@ int main(int argc, char* argv[])
   RS_TITLE << "            RS_Driver Core Version: v" << getDriverVersion() << RS_REND;
   RS_TITLE << "------------------------------------------------------" << RS_REND;
 
+  uint16_t msop_port = 6699;
+  uint16_t difop_port = 7788;
+
+  uint16_t zmq_port = 5556;
+
+  if (argc >= 2) msop_port = static_cast<uint16_t>(std::stoi(argv[1]));
+  if (argc >= 3) difop_port = static_cast<uint16_t>(std::stoi(argv[2]));
+  if (argc >= 4) zmq_port = static_cast<uint16_t>(std::stoi(argv[3]));
+
+  zmq::context_t zmq_ctx(1);
+  zmq::socket_t zmq_pub(zmq_ctx, zmq::socket_type::pub);
+  
+  //zmq_pub.bind("tcp://*:5556");  // Use TCP instead
+
+  std::string zmq_bind_addr = "tcp://*:" + std::to_string(zmq_port);
+  zmq_pub.bind(zmq_bind_addr);  // Use TCP instead
+
+  g_zmq_pub = &zmq_pub;
+
   RSDriverParam param;                  ///< Create a parameter object
   param.input_type = InputType::ONLINE_LIDAR;
-  param.input_param.msop_port = 6699;   ///< Set the lidar msop port number, the default is 6699
-  param.input_param.difop_port = 7788;  ///< Set the lidar difop port number, the default is 7788
+  param.input_param.msop_port = msop_port;   ///< Set the lidar msop port number, the default is 6699
+  param.input_param.difop_port = difop_port;  ///< Set the lidar difop port number, the default is 7788
 #if ENABLE_IMU_PARSE
   param.input_param.imu_port = 6688;   ///< Set the lidar imu port number, the default is 0
 #endif
-  param.lidar_type = LidarType::RSAIRY;   ///< Set the lidar type. Make sure this type is correct
+  param.lidar_type = LidarType::RSE1;   ///< Set the lidar type. Make sure this type is correct
   param.print();
    
   LidarDriver<PointCloudMsg> driver;               ///< Declare the driver object
